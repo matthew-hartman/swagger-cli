@@ -1,4 +1,4 @@
-module code.arista.io/swagger-cli
+module github.com/matthew-hartman/swagger-cli
 
 go 1.18
 

@@ -101,7 +101,7 @@ func (c *Command) parseFlag(v gjson.Result) *flag {
 	}
 
 	return &flag{
-		Name:        v.Get("name").String(),
+		Name:        ToKebabCase(v.Get("name").String()),
 		Short:       v.Get("x-swagger-cmd-short").String(),
 		Description: v.Get("description").String(),
 		Type:        t,
