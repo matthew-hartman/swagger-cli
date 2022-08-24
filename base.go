@@ -8,7 +8,6 @@ import (
 	"os"
 	"strings"
 
-	"github.com/carlmjohnson/requests"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
@@ -21,12 +20,26 @@ const (
 )
 
 func getSwagger(ctx context.Context, baseURL, path string) (string, error) {
-	var s string
-	err := requests.
-		URL(baseURL + path).
-		ToString(&s).
-		Fetch(ctx)
-	return s, err
+	req, err := http.NewRequestWithContext(ctx, "GET", baseURL+path, nil)
+	if err != nil {
+		return "", err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "application/json")
+	req.Header.Set("User-Agent", "swagger-cli")
+
+	resp, err := (&http.Client{}).Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+
+	b, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", err
+	}
+
+	return string(b), nil
 }
 
 type Client struct {
