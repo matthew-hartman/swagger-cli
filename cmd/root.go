@@ -5,7 +5,7 @@ import (
 	"os"
 	"strings"
 
-	swagger "github.com/matthew-hartman/swagger-cli"
+	"github.com/matthew-hartman/swagger-cli"
 	"github.com/opentracing/opentracing-go"
 
 	"github.com/spf13/cobra"
