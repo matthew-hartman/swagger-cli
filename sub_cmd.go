@@ -44,7 +44,7 @@ func (s *SubCmd) Run() error {
 		case "path":
 			s.Path = strings.ReplaceAll(s.Path, fmt.Sprintf("{%s}", f.Name), f.Value.String())
 		case "query":
-			if f.Changed || fg.Env {
+			if f.Changed || (fg.Env && f.Value.String() != "") {
 				if strings.Contains(f.Value.Type(), "Slice") {
 					params[f.Name] = strings.Trim(f.Value.String(), "[]")
 				} else {

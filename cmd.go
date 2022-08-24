@@ -60,7 +60,7 @@ func (c *Command) addCmd(
 		fg := c.parseFlag(v2).Register(s.Command.Flags())
 		s.ParsedFlags[fg.Name] = fg
 
-		if fg.Required {
+		if fg.Required && fg.In != "path" {
 			err := s.Command.MarkFlagRequired(fg.Name)
 			if err != nil {
 				fmt.Fprintf(os.Stderr,
