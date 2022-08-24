@@ -1,24 +1,39 @@
 package main
 
 import (
+	"context"
+	"os"
+	"strings"
+
 	swagger "github.com/matthew-hartman/swagger-cli"
+	"github.com/opentracing/opentracing-go"
 
 	"github.com/spf13/cobra"
 )
 
 func Execute() {
 
+	name := "swagger-cmd"
+
 	rootCmd := &cobra.Command{
-		Use: "swagger-cli",
+		Use: name,
 	}
 
 	c := swagger.Client{
-		Name:               "swagger-cli",
-		BaseURLDefault:     "http://localhost:5000",
+		Name:               name,
+		BaseURLDefault:     "http://localhost:8010",
 		SwaggerPathDefault: "/swagger.json",
 	}
 
-	cobra.CheckErr(c.Bind(rootCmd))
+	close := swagger.NewTracer(name)
+	defer close.Close()
+
+	span, ctx := opentracing.StartSpanFromContext(context.Background(), "cli")
+	defer span.Finish()
+
+	span.LogKV("args", strings.Join(os.Args, " "))
+
+	cobra.CheckErr(c.Bind(ctx, rootCmd))
 	cobra.CheckErr(rootCmd.Execute())
 }
 

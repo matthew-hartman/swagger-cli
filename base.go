@@ -8,6 +8,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/opentracing/opentracing-go"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
@@ -20,10 +21,22 @@ const (
 )
 
 func getSwagger(ctx context.Context, baseURL, path string) (string, error) {
+	span, ctx := opentracing.StartSpanFromContext(ctx, "swagger")
+	defer span.Finish()
+
 	req, err := http.NewRequestWithContext(ctx, "GET", baseURL+path, nil)
 	if err != nil {
 		return "", err
 	}
+
+	err = opentracing.GlobalTracer().Inject(
+		span.Context(),
+		opentracing.HTTPHeaders,
+		opentracing.HTTPHeadersCarrier(req.Header))
+	if err != nil {
+		fmt.Printf("Error Injecting span context to http req: %v", err)
+	}
+
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("User-Agent", "swagger-cli")
@@ -58,7 +71,7 @@ func (c *Client) Flags() *pflag.FlagSet {
 	return baseFlags
 }
 
-func (c *Client) Bind(cmd *cobra.Command) error {
+func (c *Client) Bind(ctx context.Context, cmd *cobra.Command) error {
 	cFlags := c.Flags()
 	cmd.PersistentFlags().AddFlagSet(cFlags)
 	err := viper.BindPFlags(cFlags)
@@ -67,7 +80,7 @@ func (c *Client) Bind(cmd *cobra.Command) error {
 	}
 	_ = cFlags.Parse(os.Args)
 
-	generatedCmd, err := c.CreateSubCommands(context.Background())
+	generatedCmd, err := c.CreateSubCommands(ctx)
 	if err != nil {
 		return err
 	}
@@ -85,6 +98,9 @@ func (c *Client) CreateSubCommands(ctx context.Context) (*Command, error) {
 
 	baseURL := viper.GetString(BaseURLFlag)
 	swaggerPath := viper.GetString(BaseSwaggerPathFlag)
+
+	span, ctx := opentracing.StartSpanFromContext(ctx, "cli-build")
+	defer span.Finish()
 
 	swag, err := getSwagger(ctx, baseURL, swaggerPath)
 	if err != nil {
@@ -107,7 +123,7 @@ func (c *Client) CreateSubCommands(ctx context.Context) (*Command, error) {
 		if v0.IsArray() {
 			return true
 		}
-		return cmd.addCmd(swag, k0, v0)
+		return cmd.addCmd(ctx, swag, k0, v0)
 	})
 
 	return cmd, nil
@@ -116,7 +132,7 @@ func (c *Client) CreateSubCommands(ctx context.Context) (*Command, error) {
 type Command struct {
 	flags   map[string]*flag
 	baseURL string
-	Cmds    []SubCmd
+	Cmds    []*SubCmd
 }
 
 func (c *Command) loadParameter(key, value gjson.Result) bool {
@@ -125,6 +141,7 @@ func (c *Command) loadParameter(key, value gjson.Result) bool {
 }
 
 func (c *Command) addCmd(
+	ctx context.Context,
 	swag string,
 	k0, v0 gjson.Result,
 ) bool {
@@ -137,7 +154,7 @@ func (c *Command) addCmd(
 	innerParameters := gjson.Get(swag, fmt.Sprintf("paths.%s.%s.parameters", path, strings.ToLower(method)))
 	operation := gjson.Get(swag, fmt.Sprintf("paths.%s.%s", path, strings.ToLower(method)))
 
-	s := SubCmd{
+	s := &SubCmd{
 		ParsedFlags: make(map[string]*flag),
 		Path:        path,
 		Method:      strings.ToUpper(method),
@@ -148,6 +165,7 @@ func (c *Command) addCmd(
 			Long:    operation.Get("description").String(),
 			Aliases: alias,
 		},
+		ctx: ctx,
 	}
 	s.Command.Run = func(cmd *cobra.Command, args []string) {
 		cobra.CheckErr(s.Run())
@@ -257,9 +275,14 @@ type SubCmd struct {
 
 	ParsedFlags map[string]*flag
 	*cobra.Command
+
+	ctx context.Context
 }
 
 func (s *SubCmd) Run() error {
+	span, ctx := opentracing.StartSpanFromContext(s.ctx, "cli-run")
+	defer span.Finish()
+
 	params := map[string]string{}
 
 	s.Command.Flags().VisitAll(func(f *pflag.Flag) {
@@ -284,12 +307,21 @@ func (s *SubCmd) Run() error {
 	})
 
 	req, err := http.NewRequestWithContext(
-		context.Background(), s.Method,
+		ctx, s.Method,
 		s.ServerURL+s.Path, nil,
 	)
 	if err != nil {
 		return err
 	}
+
+	err = opentracing.GlobalTracer().Inject(
+		span.Context(),
+		opentracing.HTTPHeaders,
+		opentracing.HTTPHeadersCarrier(req.Header))
+	if err != nil {
+		fmt.Printf("Error Injecting span context to http req: %v", err)
+	}
+
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "text/plain")
 	req.Header.Set("User-Agent", "swagger-cli")
