@@ -26,15 +26,22 @@ func (c *Command) addCmd(
 	ctx context.Context,
 	swag string,
 	k0, v0 gjson.Result,
-) bool {
+) error {
 
 	name := k0.String()
-	method := v0.Get("method").String()
+	method := strings.ToLower(v0.Get("method").String())
 	path := v0.Get("path").String()
 	alias := toStringSlice(v0.Get("alias").Array())
 	outerParameters := gjson.Get(swag, fmt.Sprintf("paths.%s.parameters", path))
-	innerParameters := gjson.Get(swag, fmt.Sprintf("paths.%s.%s.parameters", path, strings.ToLower(method)))
-	operation := gjson.Get(swag, fmt.Sprintf("paths.%s.%s", path, strings.ToLower(method)))
+	innerParameters := gjson.Get(swag, fmt.Sprintf("paths.%s.%s.parameters", path, method))
+	operation := gjson.Get(swag, fmt.Sprintf("paths.%s.%s", path, method))
+
+	if !gjson.Get(swag, fmt.Sprintf("paths.%s", path)).Exists() {
+		return fmt.Errorf("path %s does not exist", path)
+	}
+	if !gjson.Get(swag, fmt.Sprintf("paths.%s.%s", path, method)).Exists() {
+		return fmt.Errorf("method %s %s does not exist", method, path)
+	}
 
 	s := &SubCmd{
 		ParsedFlags: make(map[string]*flag),
@@ -74,7 +81,7 @@ func (c *Command) addCmd(
 	outerParameters.ForEach(handleParams)
 
 	c.Cmds = append(c.Cmds, s)
-	return true
+	return nil
 }
 
 func (c *Command) parseFlag(v gjson.Result) *flag {

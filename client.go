@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/opentracing/opentracing-go"
 	"github.com/spf13/cobra"
@@ -81,12 +82,21 @@ func (c *Client) CreateSubCommands(ctx context.Context) (*Command, error) {
 		return true
 	})
 
+	errG := []string{}
+
 	gjson.Get(swag, "x-swagger-cmds").ForEach(func(k0, v0 gjson.Result) bool {
 		if v0.IsArray() {
 			return true
 		}
-		return cmd.addCmd(ctx, swag, k0, v0)
+		err := cmd.addCmd(ctx, swag, k0, v0)
+		if err != nil {
+			errG = append(errG, err.Error())
+		}
+		return true
 	})
+	if len(errG) != 0 {
+		return nil, fmt.Errorf("failed to generate commands: (%v)", strings.Join(errG, ", "))
+	}
 
 	return cmd, nil
 }
