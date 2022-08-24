@@ -1,0 +1,7 @@
+reponame: code.arista.io/swagger-cli
+description: >-
+  create cli tools that automatically generate new sub-commands and
+  flags as they are added to the service's swagger spec
+users:
+  maintainers:
+    mhartman@arista.com
