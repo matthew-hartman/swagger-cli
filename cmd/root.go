@@ -25,7 +25,7 @@ func Execute() {
 		SwaggerPathDefault: "/swagger.json",
 	}
 
-	close := swagger.NewTracer(name)
+	close := swagger.SetupTracer(name)
 	defer close.Close()
 
 	span, ctx := opentracing.StartSpanFromContext(context.Background(), "cli")

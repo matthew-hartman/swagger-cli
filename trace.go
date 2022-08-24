@@ -4,24 +4,24 @@ import (
 	"fmt"
 	"io"
 
-	ot "github.com/opentracing/opentracing-go"
+	"github.com/opentracing/opentracing-go"
 	"github.com/uber/jaeger-client-go"
-	jConfig "github.com/uber/jaeger-client-go/config"
+	"github.com/uber/jaeger-client-go/config"
 )
 
-func NewTracer(name string) io.Closer {
-	cfgEnv, err := jConfig.FromEnv()
+func SetupTracer(name string) io.Closer {
+	cfgEnv, err := config.FromEnv()
 	if err != nil {
 		fmt.Printf("Failed to setup tracing: %v", err)
 		return &io.PipeReader{}
 	}
 
-	cfg := jConfig.Configuration{
-		Sampler: &jConfig.SamplerConfig{
+	cfg := config.Configuration{
+		Sampler: &config.SamplerConfig{
 			Type:  jaeger.SamplerTypeConst,
 			Param: 1,
 		},
-		Reporter: &jConfig.ReporterConfig{
+		Reporter: &config.ReporterConfig{
 			LogSpans:           true,
 			LocalAgentHostPort: cfgEnv.Reporter.LocalAgentHostPort,
 		},
@@ -34,6 +34,6 @@ func NewTracer(name string) io.Closer {
 		return &io.PipeReader{}
 	}
 
-	ot.SetGlobalTracer(tracer)
+	opentracing.SetGlobalTracer(tracer)
 	return closer
 }
