@@ -2,6 +2,7 @@ package swagger
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -44,7 +45,38 @@ func getSwagger(ctx context.Context, baseURL, path string) (string, error) {
 		return "", err
 	}
 
-	return string(b), nil
+	s, err := processSwaggerOverrides(string(b))
+	if err != nil {
+		return "", err
+	}
+	return s, nil
+}
+
+func processSwaggerOverrides(swag string) (string, error) {
+	overrides := gjson.Get(swag, "x-swagger-override")
+	if !overrides.Exists() {
+		return swag, nil
+	}
+
+	var mp map[string]interface{}
+	err := json.Unmarshal([]byte(swag), &mp)
+	if err != nil {
+		return "", err
+	}
+
+	delete(mp, "x-swagger-override")
+
+	d, err := json.Marshal(mp)
+	if err != nil {
+		return "", err
+	}
+
+	result, err := MergeBytes(d, []byte(overrides.Raw))
+	if err != nil {
+		return "", err
+	}
+
+	return string(result), nil
 }
 
 func toStringSlice(a []gjson.Result) []string {

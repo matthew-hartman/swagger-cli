@@ -24,34 +24,27 @@ func (c *Command) loadParameter(key, value gjson.Result) bool {
 
 func (c *Command) addCmd(
 	ctx context.Context,
-	swag string,
-	k0, v0 gjson.Result,
+	path, method string,
+	pathJSON, methodJSON gjson.Result,
 ) error {
 
-	name := k0.String()
-	method := strings.ToLower(v0.Get("method").String())
-	path := v0.Get("path").String()
-	alias := toStringSlice(v0.Get("alias").Array())
-	outerParameters := gjson.Get(swag, fmt.Sprintf("paths.%s.parameters", path))
-	innerParameters := gjson.Get(swag, fmt.Sprintf("paths.%s.%s.parameters", path, method))
-	operation := gjson.Get(swag, fmt.Sprintf("paths.%s.%s", path, method))
+	if !methodJSON.Get("x-swagger-cmd").Exists() {
+		return nil
+	}
 
-	if !gjson.Get(swag, fmt.Sprintf("paths.%s", path)).Exists() {
-		return fmt.Errorf("path %s does not exist", path)
-	}
-	if !gjson.Get(swag, fmt.Sprintf("paths.%s.%s", path, method)).Exists() {
-		return fmt.Errorf("method %s %s does not exist", method, path)
-	}
+	name := methodJSON.Get("x-swagger-cmd").String()
+	alias := toStringSlice(methodJSON.Get("x-swagger-cmd-alias").Array())
 
 	s := &SubCmd{
+		Name:        name,
 		ParsedFlags: make(map[string]*flag),
 		Path:        path,
 		Method:      strings.ToUpper(method),
 		ServerURL:   c.baseURL,
 		Command: &cobra.Command{
 			Use:     name,
-			Short:   operation.Get("summary").String(),
-			Long:    operation.Get("description").String(),
+			Short:   methodJSON.Get("summary").String(),
+			Long:    methodJSON.Get("description").String(),
 			Aliases: alias,
 		},
 		ctx: ctx,
@@ -59,6 +52,7 @@ func (c *Command) addCmd(
 	s.Command.Run = func(cmd *cobra.Command, args []string) {
 		cobra.CheckErr(s.Run())
 	}
+
 	handleParams := func(k2, v2 gjson.Result) bool {
 		if v2.Get("in").String() == "body" {
 			return true
@@ -77,8 +71,8 @@ func (c *Command) addCmd(
 		return true
 	}
 
-	innerParameters.ForEach(handleParams)
-	outerParameters.ForEach(handleParams)
+	methodJSON.Get("parameters").ForEach(handleParams)
+	pathJSON.Get("parameters").ForEach(handleParams)
 
 	c.Cmds = append(c.Cmds, s)
 	return nil

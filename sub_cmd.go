@@ -18,9 +18,6 @@ type SubCmd struct {
 	Method    string
 	ServerURL string
 
-	ShortDesc string
-	LongDesc  string
-
 	ParsedFlags map[string]*flag
 	*cobra.Command
 

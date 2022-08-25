@@ -1,0 +1,51 @@
+{
+	"x-swagger-override": {
+		"paths": {
+			"/test": {
+				"get": {
+					"x-swagger-cmd-alias": ["test", "alias", "override"],
+					"summary": "short cmd description"
+				}
+			}
+		}
+	},
+	"swagger": "2.0",
+	"info": {
+		"version": "3.0.0",
+		"title": "test",
+		"description": "Thanks for using the web-client"
+	},
+	"consumes": [
+		"text/plain"
+	],
+	"produces": [
+		"text/plain"
+	],
+	"paths": {
+		"/test": {
+			"parameters": [
+				{
+					"name": "test-param",
+					"in": "query",
+					"type": "string",
+					"description": "help text",
+					"x-swagger-cmd-short": "t"
+				}
+			],
+			"get": {
+				"operationId": "test",
+				"x-swagger-cmd": "test-cmd",
+				"x-swagger-cmd-alias": [
+					"test",
+					"alias"
+				],
+				"description": "Long description\n",
+				"responses": {
+					"200": {
+						"description": "OK"
+					}
+				}
+			}
+		}
+	}
+}

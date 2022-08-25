@@ -69,10 +69,13 @@ func (c *Client) CreateSubCommands(ctx context.Context) (*Command, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to get swagger: %s", err)
 	}
+	return c.parseSwagger(ctx, swag)
+}
 
+func (c *Client) parseSwagger(ctx context.Context, swag string) (*Command, error) {
 	cmd := &Command{
 		flags:   map[string]*flag{},
-		baseURL: baseURL,
+		baseURL: viper.GetString(BaseURLFlag),
 	}
 
 	gjson.Get(swag, "parameters").ForEach(func(k0, v0 gjson.Result) bool {
@@ -84,14 +87,14 @@ func (c *Client) CreateSubCommands(ctx context.Context) (*Command, error) {
 
 	errG := []string{}
 
-	gjson.Get(swag, "x-swagger-cmds").ForEach(func(k0, v0 gjson.Result) bool {
-		if v0.IsArray() {
+	gjson.Get(swag, "paths").ForEach(func(k0, v0 gjson.Result) bool {
+		v0.ForEach(func(k1, v1 gjson.Result) bool {
+			err := cmd.addCmd(ctx, k0.String(), k1.String(), v0, v1)
+			if err != nil {
+				errG = append(errG, err.Error())
+			}
 			return true
-		}
-		err := cmd.addCmd(ctx, swag, k0, v0)
-		if err != nil {
-			errG = append(errG, err.Error())
-		}
+		})
 		return true
 	})
 	if len(errG) != 0 {
