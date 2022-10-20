@@ -47,13 +47,33 @@ func (c *Client) Bind(ctx context.Context, cmd *cobra.Command) error {
 	if err != nil {
 		return err
 	}
+
+	defaultCmd := ""
 	for _, v := range generatedCmd.Cmds {
 		cmd.AddCommand(v.Command)
 		err = viper.BindPFlags(v.Command.Flags())
 		if err != nil {
 			return err
 		}
+		if v.Default {
+			defaultCmd = v.Name
+		}
 	}
+
+	// if help is in args dont set default command
+	for _, v := range os.Args {
+		if v == "help" || v == "-h" || v == "--help" {
+			defaultCmd = ""
+		}
+	}
+	if defaultCmd != "" {
+		subCmd, _, err := cmd.Find(os.Args[1:])
+		if err != nil || cmd.Use == subCmd.Use {
+			args := append([]string{defaultCmd}, os.Args[1:]...)
+			cmd.SetArgs(args)
+		}
+	}
+
 	return nil
 }
 

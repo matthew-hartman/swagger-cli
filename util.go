@@ -13,11 +13,28 @@ import (
 	"github.com/tidwall/gjson"
 )
 
+type HTTP interface {
+	Do(ctx context.Context, req *http.Request) (*http.Response, error)
+}
+
+type DefaultDoer struct{}
+
+func (d *DefaultDoer) Do(ctx context.Context, req *http.Request) (*http.Response, error) {
+	req = req.WithContext(ctx)
+	return http.DefaultClient.Do(req)
+}
+
+var doer HTTP = &DefaultDoer{}
+
+func SetHTTP(d HTTP) {
+	doer = d
+}
+
 func getSwagger(ctx context.Context, baseURL, path string) (string, error) {
 	span, ctx := opentracing.StartSpanFromContext(ctx, "swagger")
 	defer span.Finish()
 
-	req, err := http.NewRequestWithContext(ctx, "GET", baseURL+path, nil)
+	req, err := http.NewRequest("GET", baseURL+path, nil)
 	if err != nil {
 		return "", err
 	}
@@ -34,7 +51,7 @@ func getSwagger(ctx context.Context, baseURL, path string) (string, error) {
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("User-Agent", "swagger-cli")
 
-	resp, err := (&http.Client{}).Do(req)
+	resp, err := doer.Do(ctx, req)
 	if err != nil {
 		return "", err
 	}

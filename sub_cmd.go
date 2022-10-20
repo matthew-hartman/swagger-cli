@@ -17,6 +17,7 @@ type SubCmd struct {
 	Path      string
 	Method    string
 	ServerURL string
+	Default   bool
 
 	ParsedFlags map[string]*flag
 	*cobra.Command
@@ -51,10 +52,7 @@ func (s *SubCmd) Run() error {
 		}
 	})
 
-	req, err := http.NewRequestWithContext(
-		ctx, s.Method,
-		s.ServerURL+s.Path, nil,
-	)
+	req, err := http.NewRequest(s.Method, s.ServerURL+s.Path, nil)
 	if err != nil {
 		return err
 	}
@@ -77,7 +75,7 @@ func (s *SubCmd) Run() error {
 	}
 	req.URL.RawQuery = q.Encode()
 
-	resp, err := (&http.Client{}).Do(req)
+	resp, err := doer.Do(ctx, req)
 	if err != nil {
 		return err
 	}

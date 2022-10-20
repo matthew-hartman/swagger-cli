@@ -33,6 +33,7 @@ func (c *Command) addCmd(
 	}
 
 	name := methodJSON.Get("x-swagger-cmd").String()
+	def := methodJSON.Get("x-swagger-cmd-default").Bool()
 	alias := toStringSlice(methodJSON.Get("x-swagger-cmd-alias").Array())
 
 	s := &SubCmd{
@@ -40,6 +41,7 @@ func (c *Command) addCmd(
 		ParsedFlags: make(map[string]*flag),
 		Path:        path,
 		Method:      strings.ToUpper(method),
+		Default:     def,
 		ServerURL:   c.baseURL,
 		Command: &cobra.Command{
 			Use:     name,
