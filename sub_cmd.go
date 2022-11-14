@@ -32,7 +32,7 @@ func (s *SubCmd) Run() error {
 	params := map[string]string{}
 
 	s.Command.Flags().VisitAll(func(f *pflag.Flag) {
-		for _, v := range []string{"help", "swagger-path", "base-url"} {
+		for _, v := range []string{"help", "swagger-path", "base-url", "health-path"} {
 			if v == f.Name {
 				return
 			}

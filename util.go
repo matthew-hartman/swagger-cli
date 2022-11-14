@@ -30,6 +30,36 @@ func SetHTTP(d HTTP) {
 	doer = d
 }
 
+func getHealth(ctx context.Context, baseURL, path string) error {
+	if path == "" {
+		return nil
+	}
+
+	span, ctx := opentracing.StartSpanFromContext(ctx, "swagger")
+	defer span.Finish()
+
+	req, err := http.NewRequest("GET", baseURL+path, nil)
+	if err != nil {
+		return err
+	}
+
+	err = opentracing.GlobalTracer().Inject(
+		span.Context(),
+		opentracing.HTTPHeaders,
+		opentracing.HTTPHeadersCarrier(req.Header))
+	if err != nil {
+		fmt.Printf("Error Injecting span context to http req: %v", err)
+	}
+
+	req.Header.Set("User-Agent", "swagger-cli")
+
+	_, err = doer.Do(ctx, req)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func getSwagger(ctx context.Context, baseURL, path string) (string, error) {
 	span, ctx := opentracing.StartSpanFromContext(ctx, "swagger")
 	defer span.Finish()

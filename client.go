@@ -16,12 +16,15 @@ import (
 const (
 	BaseURLFlag         = "base-url"
 	BaseSwaggerPathFlag = "swagger-path"
+	BaseHealthPathFlag  = "health-path"
 )
 
 type Client struct {
-	Name               string
-	BaseURLDefault     string
-	SwaggerPathDefault string
+	Name                  string
+	BaseURLDefault        string
+	SwaggerPathDefault    string
+	HealthPathDefault     string
+	HealthCheckFailedTmpl string
 }
 
 func (c *Client) Flags() *pflag.FlagSet {
@@ -30,6 +33,9 @@ func (c *Client) Flags() *pflag.FlagSet {
 		"base url of "+c.Name)
 	baseFlags.String(BaseSwaggerPathFlag, c.SwaggerPathDefault,
 		"default path of swagger.json on remote")
+	baseFlags.String(BaseHealthPathFlag, c.HealthPathDefault,
+		"default path of health check on remote (set to empty string to bypass)",
+	)
 
 	return baseFlags
 }
@@ -81,9 +87,16 @@ func (c *Client) CreateSubCommands(ctx context.Context) (*Command, error) {
 
 	baseURL := viper.GetString(BaseURLFlag)
 	swaggerPath := viper.GetString(BaseSwaggerPathFlag)
+	healthPath := viper.GetString(BaseHealthPathFlag)
 
 	span, ctx := opentracing.StartSpanFromContext(ctx, "cli-build")
 	defer span.Finish()
+
+	err := getHealth(ctx, baseURL, healthPath)
+	if err != nil {
+		fmt.Printf(c.HealthCheckFailedTmpl, err)
+		return nil, err
+	}
 
 	swag, err := getSwagger(ctx, baseURL, swaggerPath)
 	if err != nil {
