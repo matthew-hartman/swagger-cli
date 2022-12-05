@@ -109,6 +109,7 @@ func (c *Command) parseFlag(v gjson.Result) *flag {
 		Description: v.Get("description").String(),
 		Type:        t,
 		Default:     def,
+		NoOptDef:    v.Get("x-swagger-cmd-no-opt-def").Bool(),
 		In:          v.Get("in").String(),
 		Required:    req,
 		Env:         env,
@@ -125,6 +126,7 @@ type flag struct {
 	Env         bool
 	Required    bool
 	Default     gjson.Result
+	NoOptDef    bool
 
 	src gjson.Result
 }
@@ -145,6 +147,9 @@ func (f *flag) Register(flags *pflag.FlagSet) *flag {
 		flags.BoolSliceP(f.Name, f.Short, nil, f.Description)
 	default:
 		fmt.Printf("unknown type: %v, %v\n", f.Type, f.src)
+	}
+	if f.NoOptDef {
+		flags.Lookup(f.Name).NoOptDefVal = f.Default.String()
 	}
 	return f
 }
