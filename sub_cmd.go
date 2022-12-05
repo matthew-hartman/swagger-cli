@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"strings"
 
 	"github.com/opentracing/opentracing-go"
@@ -68,6 +69,7 @@ func (s *SubCmd) Run() error {
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "text/plain")
 	req.Header.Set("User-Agent", "swagger-cli")
+	req.Header.Set("X-Raw-Args", strings.Join(os.Args, " "))
 
 	q := req.URL.Query()
 	for k, v := range params {
