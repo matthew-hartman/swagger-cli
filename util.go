@@ -3,6 +3,7 @@ package swagger
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -86,6 +87,10 @@ func getSwagger(ctx context.Context, baseURL, path string) (string, error) {
 		return "", err
 	}
 	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return "", errors.New(resp.Status)
+	}
 
 	b, err := io.ReadAll(resp.Body)
 	if err != nil {
