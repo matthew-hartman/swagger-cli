@@ -6,7 +6,6 @@ import (
 	"os"
 	"strings"
 
-	"github.com/opentracing/opentracing-go"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
@@ -64,6 +63,7 @@ func (c *Client) Bind(ctx context.Context, cmd *cobra.Command) error {
 		if v.Default {
 			defaultCmd = v.Name
 		}
+		v.ctx = ctx
 	}
 
 	// if help is in args dont set default command
@@ -89,8 +89,8 @@ func (c *Client) CreateSubCommands(ctx context.Context) (*Command, error) {
 	swaggerPath := viper.GetString(BaseSwaggerPathFlag)
 	healthPath := viper.GetString(BaseHealthPathFlag)
 
-	span, ctx := opentracing.StartSpanFromContext(ctx, "cli-build")
-	defer span.Finish()
+	ctx, span := tracer.Start(ctx, "health")
+	defer span.End()
 
 	err := getHealth(ctx, baseURL, healthPath)
 	if err != nil {
@@ -122,7 +122,7 @@ func (c *Client) parseSwagger(ctx context.Context, swag string) (*Command, error
 
 	gjson.Get(swag, "paths").ForEach(func(k0, v0 gjson.Result) bool {
 		v0.ForEach(func(k1, v1 gjson.Result) bool {
-			err := cmd.addCmd(ctx, k0.String(), k1.String(), v0, v1)
+			err := cmd.addCmd(k0.String(), k1.String(), v0, v1)
 			if err != nil {
 				errG = append(errG, err.Error())
 			}

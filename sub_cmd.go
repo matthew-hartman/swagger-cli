@@ -11,6 +11,8 @@ import (
 	"github.com/opentracing/opentracing-go"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/propagation"
 )
 
 type SubCmd struct {
@@ -70,6 +72,7 @@ func (s *SubCmd) Run() error {
 	req.Header.Set("Accept", "text/plain")
 	req.Header.Set("User-Agent", "swagger-cli")
 	req.Header.Set("X-Raw-Args", strings.Join(os.Args, " "))
+	otel.GetTextMapPropagator().Inject(ctx, propagation.HeaderCarrier(req.Header))
 
 	q := req.URL.Query()
 	for k, v := range params {

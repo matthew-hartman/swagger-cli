@@ -1,7 +1,6 @@
 package swagger
 
 import (
-	"context"
 	"fmt"
 	"os"
 	"strings"
@@ -23,7 +22,6 @@ func (c *Command) loadParameter(key, value gjson.Result) bool {
 }
 
 func (c *Command) addCmd(
-	ctx context.Context,
 	path, method string,
 	pathJSON, methodJSON gjson.Result,
 ) error {
@@ -49,7 +47,6 @@ func (c *Command) addCmd(
 			Long:    methodJSON.Get("description").String(),
 			Aliases: alias,
 		},
-		ctx: ctx,
 	}
 	s.Command.Run = func(cmd *cobra.Command, args []string) {
 		cobra.CheckErr(s.Run())

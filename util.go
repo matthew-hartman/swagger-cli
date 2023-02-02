@@ -4,15 +4,26 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 	"net/http"
 	"regexp"
 	"strings"
 
-	"github.com/opentracing/opentracing-go"
 	"github.com/tidwall/gjson"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/propagation"
+	"go.opentelemetry.io/otel/trace"
 )
+
+var tracer trace.Tracer
+
+func init() {
+	tracer = trace.NewNoopTracerProvider().Tracer("swagger")
+}
+
+func SetTracer(t trace.Tracer) {
+	tracer = t
+}
 
 type HTTP interface {
 	Do(ctx context.Context, req *http.Request) (*http.Response, error)
@@ -36,23 +47,16 @@ func getHealth(ctx context.Context, baseURL, path string) error {
 		return nil
 	}
 
-	span, ctx := opentracing.StartSpanFromContext(ctx, "swagger")
-	defer span.Finish()
+	ctx, span := tracer.Start(ctx, "health")
+	defer span.End()
 
 	req, err := http.NewRequest("GET", baseURL+path, nil)
 	if err != nil {
 		return err
 	}
 
-	err = opentracing.GlobalTracer().Inject(
-		span.Context(),
-		opentracing.HTTPHeaders,
-		opentracing.HTTPHeadersCarrier(req.Header))
-	if err != nil {
-		fmt.Printf("Error Injecting span context to http req: %v", err)
-	}
-
 	req.Header.Set("User-Agent", "swagger-cli")
+	otel.GetTextMapPropagator().Inject(ctx, propagation.HeaderCarrier(req.Header))
 
 	_, err = doer.Do(ctx, req)
 	if err != nil {
@@ -62,25 +66,18 @@ func getHealth(ctx context.Context, baseURL, path string) error {
 }
 
 func getSwagger(ctx context.Context, baseURL, path string) (string, error) {
-	span, ctx := opentracing.StartSpanFromContext(ctx, "swagger")
-	defer span.Finish()
+	ctx, span := tracer.Start(ctx, "swagger")
+	defer span.End()
 
 	req, err := http.NewRequest("GET", baseURL+path, nil)
 	if err != nil {
 		return "", err
 	}
 
-	err = opentracing.GlobalTracer().Inject(
-		span.Context(),
-		opentracing.HTTPHeaders,
-		opentracing.HTTPHeadersCarrier(req.Header))
-	if err != nil {
-		fmt.Printf("Error Injecting span context to http req: %v", err)
-	}
-
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("User-Agent", "swagger-cli")
+	otel.GetTextMapPropagator().Inject(ctx, propagation.HeaderCarrier(req.Header))
 
 	resp, err := doer.Do(ctx, req)
 	if err != nil {
