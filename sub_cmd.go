@@ -40,7 +40,10 @@ func (s *SubCmd) Run() error {
 				return
 			}
 		}
-		fg := s.ParsedFlags[f.Name]
+		fg, ok := s.ParsedFlags[f.Name]
+		if !ok || fg == nil {
+			return
+		}
 		switch fg.In {
 		case "path":
 			s.Path = strings.ReplaceAll(s.Path, fmt.Sprintf("{%s}", f.Name), f.Value.String())
