@@ -75,6 +75,7 @@ func (s *SubCmd) Run() error {
 	req.Header.Set("Accept", "text/plain")
 	req.Header.Set("User-Agent", "swagger-cli")
 	req.Header.Set("X-Raw-Args", strings.Join(os.Args, " "))
+	req.Header.Set("X-Term-Width", fmt.Sprintf("%d", getTerminalWidth()))
 	otel.GetTextMapPropagator().Inject(ctx, propagation.HeaderCarrier(req.Header))
 
 	q := req.URL.Query()

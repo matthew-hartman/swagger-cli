@@ -13,6 +13,7 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
+	"golang.org/x/term"
 )
 
 var tracer trace.Tracer
@@ -143,4 +144,12 @@ func ToKebabCase(str string) string {
 	snake := matchFirstCap.ReplaceAllString(str, "${1}-${2}")
 	snake = matchAllCap.ReplaceAllString(snake, "${1}-${2}")
 	return strings.ToLower(snake)
+}
+
+func getTerminalWidth() int {
+	width, _, err := term.GetSize(1)
+	if err != nil {
+		return -1
+	}
+	return width
 }
