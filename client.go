@@ -3,6 +3,7 @@ package swagger
 import (
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"strings"
 
@@ -24,6 +25,7 @@ type Client struct {
 	SwaggerPathDefault    string
 	HealthPathDefault     string
 	HealthCheckFailedTmpl string
+	FlagOutput            io.Writer
 }
 
 func (c *Client) Flags() *pflag.FlagSet {
@@ -35,6 +37,11 @@ func (c *Client) Flags() *pflag.FlagSet {
 	baseFlags.String(BaseHealthPathFlag, c.HealthPathDefault,
 		"default path of health check on remote (set to empty string to bypass)",
 	)
+	if c.FlagOutput != nil {
+		baseFlags.SetOutput(c.FlagOutput)
+	} else {
+		baseFlags.SetOutput(os.Stdout)
+	}
 
 	return baseFlags
 }
